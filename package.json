@@ -1,0 +1,21 @@
+{
+  "name": "nest_tracker",
+  "description": "",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "index": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aitormagan/nest_tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "homepage": "https://aitormagan.es",
+  "dependencies": {
+    "homebridge": "^1.1.0",
+    "homebridge-nest": "^4.4.6",
+    "influx": "^5.5.1"
+  }
+}
