@@ -1,4 +1,5 @@
 const homebridge = require('homebridge/lib/api.js');
+const Logger = require('homebridge/lib/logger.js').Logger;
 const nest = require('homebridge-nest');
 const InfluxDB = require('influx').InfluxDB;
 const config = require('./config');
@@ -9,9 +10,7 @@ const influx = new InfluxDB({
     database: config.influx.database
 });
 
-let log = function(text) {
-};
-log.error = log.debug = log.info = log.warn = log.warning = log.critical = log;
+const log = Logger.withPrefix("Nest");
 
 homebridge_api.registerPlatform = function(name, type, constructor) {
     let nest_platform = new constructor(log, {googleAuth: config.auth}, null);
