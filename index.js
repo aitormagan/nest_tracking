@@ -15,18 +15,18 @@ const log = Logger.withPrefix("Nest");
 homebridge_api.registerPlatform = function(name, type, constructor) {
     let nest_platform = new constructor(log, {googleAuth: config.auth}, null);
     nest_platform.accessories(function(res, err) {
-        let thermostasts = res.filter(accessory => accessory.constructor.name == "NestThermostatAccessory");
+        let thermostats = res.filter(accessory => accessory.constructor.name == "NestThermostatAccessory");
         let points = [];
-        thermostasts.forEach(thermostast => {
+        thermostats.forEach(thermostat => {
             points.push({
                 measurement: 'temperature',
-                fields: { value: thermostast.device.current_temperature },
-                tags: { device_id: thermostast.device.device_id }
+                fields: { value: thermostat.device.current_temperature },
+                tags: { device_id: thermostat.device.device_id }
             });
             points.push({
                 measurement: 'humidity',
-                fields: { value: thermostast.device.current_humidity },
-                tags: { device_id: thermostast.device.device_id }
+                fields: { value: thermostat.device.current_humidity },
+                tags: { device_id: thermostat.device.device_id }
             });
         });
 
