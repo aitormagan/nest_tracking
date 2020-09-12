@@ -39,3 +39,5 @@ homebridge_api.registerPlatform = function(name, type, constructor) {
 };
 
 nest(homebridge_api);
+
+setTimeout(process.exit.bind(this, 1), 30000)
