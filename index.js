@@ -12,45 +12,33 @@ const influx = new InfluxDB({
 
 const log = Logger.withPrefix("Nest");
 
-homebridgeApi.registerPlatform = function(name, type, constructor) {
+homebridgeApi.registerPlatform = async function(name, type, constructor) {
     const nestPlatform = new constructor(log, {googleAuth: config.auth}, homebridgeApi);
+    const conn = await nestPlatform.setupConnection(false, false);
+    const points = [];
+    await conn.subscribe({});
+    await conn.observe({});
 
-    homebridgeApi.registerPlatformAccessories = function(plugin, vendor, accessories) {
-        const points = [];
-        const thermostats = accessories.filter(accessory => {
-            let serviceNames = accessory.services.map(service => service.constructor.name);
-            return serviceNames.indexOf("Thermostat") >= 0;
+    const thermostats = conn.apiResponseToObjectTree(conn.currentState).devices.thermostats;    
+    Object.keys(thermostats).forEach(deviceId => {
+        const thermostat = thermostats[deviceId];
+        points.push({
+            measurement: 'temperature',
+            fields: { value: thermostat.current_temperature },
+            tags: { device_id: deviceId }
         });
-
-        thermostats.forEach(thermostat => {
-
-            const accesoryInfoService = thermostat.services.find(service => service.constructor.name === "AccessoryInformation");
-            const serialNumber = accesoryInfoService.characteristics.find(characteristic => characteristic.constructor.name === "SerialNumber");
-            const thermostatService = thermostat.services.find(service => service.constructor.name === "Thermostat");
-            const currentTemperature = thermostatService.characteristics.find(characteristic => characteristic.constructor.name === "CurrentTemperature");
-            const currentHumidity = thermostatService.characteristics.find(characteristic => characteristic.constructor.name === "CurrentRelativeHumidity");
-
-            points.push({
-                measurement: 'temperature',
-                fields: { value: currentTemperature.value },
-                tags: { device_id: serialNumber.value }
-            });
-            points.push({
-                measurement: 'humidity',
-                fields: { value: currentHumidity.value },
-                tags: { device_id: serialNumber.value }
-            });
+        points.push({
+            measurement: 'humidity',
+            fields: { value: thermostat.current_humidity },
+            tags: { device_id: deviceId }
         });
+    });
 
-        influx.writePoints(points).then(() => {
-            process.exit(0);
-        }).catch(err => {
-            process.exit(1);
-        });
-    }
-
-    homebridgeApi.emit("didFinishLaunching");
-    
+    influx.writePoints(points).then(() => {
+        process.exit(0);
+    }).catch(err => {
+        process.exit(1);
+    });
 };
 
 nest(homebridgeApi);
