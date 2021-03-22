@@ -4,7 +4,7 @@ const nest = require('homebridge-nest');
 const InfluxDB = require('influx').InfluxDB;
 const config = require('./config');
 
-const homebridge_api = new homebridge.HomebridgeAPI();
+const homebridgeApi = new homebridge.HomebridgeAPI();
 const influx = new InfluxDB({
     host: config.influx.host,
     database: config.influx.database
@@ -12,32 +12,35 @@ const influx = new InfluxDB({
 
 const log = Logger.withPrefix("Nest");
 
-homebridge_api.registerPlatform = function(name, type, constructor) {
-    let nest_platform = new constructor(log, {googleAuth: config.auth}, null);
-    nest_platform.accessories(function(res, err) {
-        let thermostats = res.filter(accessory => accessory.constructor.name == "NestThermostatAccessory");
-        let points = [];
-        thermostats.forEach(thermostat => {
-            points.push({
-                measurement: 'temperature',
-                fields: { value: thermostat.device.current_temperature },
-                tags: { device_id: thermostat.device.device_id }
-            });
-            points.push({
-                measurement: 'humidity',
-                fields: { value: thermostat.device.current_humidity },
-                tags: { device_id: thermostat.device.device_id }
-            });
-        });
+homebridgeApi.registerPlatform = async function(name, type, constructor) {
+    const nestPlatform = new constructor(log, {googleAuth: config.auth}, homebridgeApi);
+    const conn = await nestPlatform.setupConnection(false, false);
+    const points = [];
+    await conn.subscribe({});
+    await conn.observe({});
 
-        influx.writePoints(points).then(() => {
-            process.exit(0);
-        }).catch(err => {
-            process.exit(1);
+    const thermostats = conn.apiResponseToObjectTree(conn.currentState).devices.thermostats;    
+    Object.keys(thermostats).forEach(deviceId => {
+        const thermostat = thermostats[deviceId];
+        points.push({
+            measurement: 'temperature',
+            fields: { value: thermostat.current_temperature },
+            tags: { device_id: deviceId }
         });
+        points.push({
+            measurement: 'humidity',
+            fields: { value: thermostat.current_humidity },
+            tags: { device_id: deviceId }
+        });
+    });
+
+    influx.writePoints(points).then(() => {
+        process.exit(0);
+    }).catch(err => {
+        process.exit(1);
     });
 };
 
-nest(homebridge_api);
+nest(homebridgeApi);
 
 setTimeout(process.exit.bind(this, 1), 30000);
